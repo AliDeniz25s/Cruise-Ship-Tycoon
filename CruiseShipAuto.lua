@@ -258,7 +258,6 @@ local function runPortSequence(shipId)
             local stockAmount = tonumber(stockBox.Text) or 100000
             local energyAmount = tonumber(energyBox.Text) or 7925.2
             
-            -- Grouped together sequentially right where fuel and stock are bought
             shipEvent:FireServer("BuyFuel", fuelAmount)
             task.wait(0.05)
             shipEvent:FireServer("BuyStock", stockAmount)
@@ -303,7 +302,8 @@ task.spawn(function()
                                 if continueBtn then
                                     pcall(function()
                                         if firesignal then
-                                            firesignal(continueBtn.MouseButton1Click)
+                                       
+     firesignal(continueBtn.MouseButton1Click)
                                             firesignal(continueBtn.Activated)
                                         end
                                     end)
@@ -364,8 +364,8 @@ if shipEvent and passengerEvent then
         
         if not isSmartActive or isRestocking then return end
         
-        -- Added "Energy" to the listener check alongside Fuel and Stock
-        if (actionType == "Fuel" or actionType == "Stock" or actionType == "Energy") and type(currentVal) == "number" and currentVal <= LOW_THRESHOLD then
+        -- Energy removed from trigger check, only Fuel and Stock trigger the restock sequence now
+        if (actionType == "Fuel" or actionType == "Stock") and type(currentVal) == "number" and currentVal <= LOW_THRESHOLD then
             isRestocking = true
             runPortSequence(shipId)
             
