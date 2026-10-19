@@ -334,18 +334,24 @@ if shipEvent and passengerEvent then
             cachedShipId = shipId
         end
         
-        -- Instant trigger on non-fuel/non-stock events with a 5-second debounce
-        if actionType and actionType ~= "Fuel" and actionType ~= "Stock" then
-            if (tick() - lastInstantPassengerAction > 5) then
-                lastInstantPassengerAction = tick()
-                task.spawn(function()
-                    pcall(function()
-                        local targetId = shipId or cachedShipId
-                        passengerEvent:FireServer(targetId, "UnloadPassengersOfShip")
-                        task.wait(0.08)
-                        passengerEvent:FireServer(targetId, "LoadPassengersOfShip")
+        -- Strictly target arrival/docking events and completely ignore leaving/departure events
+        if type(actionType) == "string" then
+            local actionStr = string.lower(actionType)
+            local isArrival = string.find(actionStr, "dock") or string.find(actionStr, "arrive") or string.find(actionStr, "port")
+            local isDeparture = string.find(actionStr, "leave") or string.find(actionStr, "depart") or string.find(actionStr, "exit")
+            
+            if isArrival and not isDeparture then
+                if (tick() - lastInstantPassengerAction > 5) then
+                    lastInstantPassengerAction = tick()
+                    task.spawn(function()
+                        pcall(function()
+                            local targetId = shipId or cachedShipId
+                            passengerEvent:FireServer(targetId, "UnloadPassengersOfShip")
+                            task.wait(0.08)
+                            passengerEvent:FireServer(targetId, "LoadPassengersOfShip")
+                        end)
                     end)
-                end)
+                end
             end
         end
         
