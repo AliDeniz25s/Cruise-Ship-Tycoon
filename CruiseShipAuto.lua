@@ -52,8 +52,8 @@ end)
 
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 220, 0, 265)
-mainFrame.Position = UDim2.new(1, -240, 1, -290)
+mainFrame.Size = UDim2.new(0, 220, 0, 300) -- Increased height to fit the new route box
+mainFrame.Position = UDim2.new(1, -240, 1, -325)
 mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 mainFrame.BackgroundTransparency = 0.05
 mainFrame.BorderSizePixel = 0
@@ -182,6 +182,7 @@ end
 local fuelBox = createInputBox("Fuel Amount:", 96000, 3)
 local stockBox = createInputBox("Stock Amount:", 100000, 4)
 local energyBox = createInputBox("Energy Amt:", 7925.2, 5)
+local routeBox = createInputBox("Route ID:", 1, 6) -- Added input box for Route ID
 
 local CONFIG_FILE = "ShipAutoConfig.json"
 local canSaveFiles = (writefile and readfile and isfile) or false
@@ -192,7 +193,8 @@ local function saveConfig()
         local configData = {
             fuel = fuelBox.Text,
             stock = stockBox.Text,
-            energy = energyBox.Text
+            energy = energyBox.Text,
+            route = routeBox.Text
         }
         writefile(CONFIG_FILE, HttpService:JSONEncode(configData))
     end)
@@ -206,6 +208,7 @@ local function loadConfig()
             if decoded.fuel then fuelBox.Text = tostring(decoded.fuel) end
             if decoded.stock then stockBox.Text = tostring(decoded.stock) end
             if decoded.energy then energyBox.Text = tostring(decoded.energy) end
+            if decoded.route then routeBox.Text = tostring(decoded.route) end
         end
     end)
 end
@@ -213,6 +216,7 @@ end
 fuelBox.FocusLost:Connect(saveConfig)
 stockBox.FocusLost:Connect(saveConfig)
 energyBox.FocusLost:Connect(saveConfig)
+routeBox.FocusLost:Connect(saveConfig)
 loadConfig()
 
 local isSmartActive = false
@@ -242,6 +246,7 @@ local function runPortSequence(shipId)
     task.spawn(function()
         pcall(function()
             local targetId = shipId or cachedShipId or "0lAl"
+            local targetRoute = tonumber(routeBox.Text) or 1
             
             shipEvent:FireServer("DeactivateRoute", targetId)
             task.wait(0.1)
@@ -267,7 +272,8 @@ local function runPortSequence(shipId)
             shipEvent:FireServer("BuyStock", stockAmount)
             task.wait(2.5)
             
-            shipEvent:FireServer("ActivateRoute", targetId, 1)
+            -- Activates whatever route number is typed into the GUI box
+            shipEvent:FireServer("ActivateRoute", targetId, targetRoute)
         end)
     end)
 end
@@ -358,7 +364,6 @@ if shipEvent and passengerEvent then
                             task.wait(0.08)
                             passengerEvent:FireServer(targetId, "LoadPassengersOfShip")
                             
-                            -- Directly bundled right into the passenger load/unload check on every dock arrival
                             if isSmartActive then
                                 task.wait(0.08)
                                 local energyAmount = tonumber(energyBox.Text) or 7925.2
@@ -372,7 +377,6 @@ if shipEvent and passengerEvent then
         
         if not isSmartActive or isRestocking then return end
         
-        -- Fuel and Stock trigger full restock sequences when below 2K
         if (actionType == "Fuel" or actionType == "Stock") and type(currentVal) == "number" and currentVal <= LOW_THRESHOLD then
             isRestocking = true
             runPortSequence(shipId)
