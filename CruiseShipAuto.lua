@@ -249,20 +249,22 @@ local function runPortSequence(shipId)
             shipEvent:FireServer("RequestTug")
             task.wait(0.1)
             
+            -- Passenger loading/unloading section + attached Energy buy
             passengerEvent:FireServer(targetId, "UnloadPassengersOfShip")
             task.wait(0.08)
             passengerEvent:FireServer(targetId, "LoadPassengersOfShip")
             task.wait(0.08)
             
+            local energyAmount = tonumber(energyBox.Text) or 7925.2
+            shipEvent:FireServer("BuyEnergy", energyAmount)
+            task.wait(0.05)
+            
             local fuelAmount = tonumber(fuelBox.Text) or 96000
             local stockAmount = tonumber(stockBox.Text) or 100000
-            local energyAmount = tonumber(energyBox.Text) or 7925.2
             
             shipEvent:FireServer("BuyFuel", fuelAmount)
             task.wait(0.05)
             shipEvent:FireServer("BuyStock", stockAmount)
-            task.wait(0.05)
-            shipEvent:FireServer("BuyEnergy", energyAmount)
             task.wait(2.5)
             
             shipEvent:FireServer("ActivateRoute", targetId, 1)
@@ -356,7 +358,7 @@ if shipEvent and passengerEvent then
                             task.wait(0.08)
                             passengerEvent:FireServer(targetId, "LoadPassengersOfShip")
                             
-                            -- Automatically buy energy on EVERY dock arrival when automation is active
+                            -- Directly bundled right into the passenger load/unload check on every dock arrival
                             if isSmartActive then
                                 task.wait(0.08)
                                 local energyAmount = tonumber(energyBox.Text) or 7925.2
@@ -370,7 +372,7 @@ if shipEvent and passengerEvent then
         
         if not isSmartActive or isRestocking then return end
         
-        -- Only Fuel and Stock trigger full emergency port restock sequences when below 2K
+        -- Fuel and Stock trigger full restock sequences when below 2K
         if (actionType == "Fuel" or actionType == "Stock") and type(currentVal) == "number" and currentVal <= LOW_THRESHOLD then
             isRestocking = true
             runPortSequence(shipId)
