@@ -319,6 +319,7 @@ end)
 
 local LOW_THRESHOLD = 2000 
 local isRestocking = false
+local lastInstantPassengerAction = 0
 
 if shipEvent and passengerEvent then
     shipEvent.OnClientEvent:Connect(function(...)
@@ -333,16 +334,19 @@ if shipEvent and passengerEvent then
             cachedShipId = shipId
         end
         
-        -- Automatically execute passenger unload/load on dock / arrival events
-        if actionType == "Dock" or actionType == "Arrive" or actionType == "Port" or actionType == "Arrived" then
-            task.spawn(function()
-                pcall(function()
-                    local targetId = shipId or cachedShipId
-                    passengerEvent:FireServer(targetId, "UnloadPassengersOfShip")
-                    task.wait(0.08)
-                    passengerEvent:FireServer(targetId, "LoadPassengersOfShip")
+        -- Instant trigger on non-fuel/non-stock events with a 5-second debounce
+        if actionType and actionType ~= "Fuel" and actionType ~= "Stock" then
+            if (tick() - lastInstantPassengerAction > 5) then
+                lastInstantPassengerAction = tick()
+                task.spawn(function()
+                    pcall(function()
+                        local targetId = shipId or cachedShipId
+                        passengerEvent:FireServer(targetId, "UnloadPassengersOfShip")
+                        task.wait(0.08)
+                        passengerEvent:FireServer(targetId, "LoadPassengersOfShip")
+                    end)
                 end)
-            end)
+            end
         end
         
         if not isSmartActive or isRestocking then return end
