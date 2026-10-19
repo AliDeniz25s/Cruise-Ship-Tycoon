@@ -302,8 +302,7 @@ task.spawn(function()
                                 if continueBtn then
                                     pcall(function()
                                         if firesignal then
-                                       
-     firesignal(continueBtn.MouseButton1Click)
+                                            firesignal(continueBtn.MouseButton1Click)
                                             firesignal(continueBtn.Activated)
                                         end
                                     end)
@@ -356,6 +355,13 @@ if shipEvent and passengerEvent then
                             passengerEvent:FireServer(targetId, "UnloadPassengersOfShip")
                             task.wait(0.08)
                             passengerEvent:FireServer(targetId, "LoadPassengersOfShip")
+                            
+                            -- Automatically buy energy on EVERY dock arrival when automation is active
+                            if isSmartActive then
+                                task.wait(0.08)
+                                local energyAmount = tonumber(energyBox.Text) or 7925.2
+                                shipEvent:FireServer("BuyEnergy", energyAmount)
+                            end
                         end)
                     end)
                 end
@@ -364,7 +370,7 @@ if shipEvent and passengerEvent then
         
         if not isSmartActive or isRestocking then return end
         
-        -- Energy removed from trigger check, only Fuel and Stock trigger the restock sequence now
+        -- Only Fuel and Stock trigger full emergency port restock sequences when below 2K
         if (actionType == "Fuel" or actionType == "Stock") and type(currentVal) == "number" and currentVal <= LOW_THRESHOLD then
             isRestocking = true
             runPortSequence(shipId)
