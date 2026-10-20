@@ -21,6 +21,7 @@ ScreenGui.Name = "Cruise Line Tycoon AFK Script"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.Parent = playerGui
+
 local CONFIG_FILE_NAME = "cruiseline_config.json"
 local toggleBtn, nuclearToggleBtn
 local fuelBox, stockBox, energyBox, routeBox
@@ -76,6 +77,7 @@ local function loadConfig()
     end)
     return success
 end
+
 local function triggerAntiAfk()
     pcall(function()
         VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
@@ -94,9 +96,10 @@ task.spawn(function()
         triggerAntiAfk()
     end
 end)
+
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 220, 0, 440) -- Expanded height to fit config buttons
+mainFrame.Size = UDim2.new(0, 220, 0, 440)
 mainFrame.Position = UDim2.new(1, -240, 1, -465)
 mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 mainFrame.BackgroundTransparency = 0.05
@@ -243,9 +246,8 @@ end
 fuelBox = createInputBox("Fuel Amount:", 0, 4)
 stockBox = createInputBox("Stock Amount:", 551000, 5)
 energyBox = createInputBox("Energy Amt:", 0, 6)
-routeBox = createInputBox("Route ID:", 3 7)
+routeBox = createInputBox("Route ID:", 3, 7)
 
--- Config Save/Load Buttons
 local saveConfigBtn = Instance.new("TextButton")
 saveConfigBtn.Size = UDim2.new(1, 0, 0, 32)
 saveConfigBtn.LayoutOrder = 8
@@ -317,7 +319,6 @@ closeBtn.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
 end)
 
--- Attempt to load config on start
 loadConfig()
 
 local remoteFolder = ReplicatedStorage:WaitForChild("RemoteEvents", 5)
@@ -457,6 +458,7 @@ if shipEvent and passengerEvent then
             return
         end
         
+        loadConfig()
         local shouldTriggerRestock = false
         if nuclearActive then
             if actionType == "Stock" and type(currentVal) == "number" and currentVal <= LOW_THRESHOLD then
