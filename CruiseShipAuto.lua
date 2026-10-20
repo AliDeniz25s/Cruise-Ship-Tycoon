@@ -52,8 +52,8 @@ end)
 
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 220, 0, 300) -- Increased height to fit the new route box
-mainFrame.Position = UDim2.new(1, -240, 1, -325)
+mainFrame.Size = UDim2.new(0, 220, 0, 340) -- Increased height to fit the new toggle
+mainFrame.Position = UDim2.new(1, -240, 1, -365)
 mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 mainFrame.BackgroundTransparency = 0.05
 mainFrame.BorderSizePixel = 0
@@ -136,9 +136,22 @@ toggleBtn.TextSize = 13
 toggleBtn.Parent = contentContainer
 Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 6)
 
+-- Nuclear Reactor Mode Toggle Button
+local nuclearActive = true
+local nuclearToggleBtn = Instance.new("TextButton")
+nuclearToggleBtn.Size = UDim2.new(1, 0, 0, 30)
+nuclearToggleBtn.LayoutOrder = 2
+nuclearToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 180, 80)
+nuclearToggleBtn.Text = "Nuclear Reactor Mode: ON"
+nuclearToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+nuclearToggleBtn.Font = Enum.Font.SourceSansBold
+nuclearToggleBtn.TextSize = 13
+nuclearToggleBtn.Parent = contentContainer
+Instance.new("UICorner", nuclearToggleBtn).CornerRadius = UDim.new(0, 6)
+
 local testBtn = Instance.new("TextButton")
 testBtn.Size = UDim2.new(1, 0, 0, 30)
-testBtn.LayoutOrder = 2
+testBtn.LayoutOrder = 3
 testBtn.BackgroundColor3 = Color3.fromRGB(50, 100, 180)
 testBtn.Text = "Run Sequence"
 testBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -179,10 +192,10 @@ local function createInputBox(labelText, defaultVal, order)
     return box
 end
 
-local fuelBox = createInputBox("Fuel Amount:", 96000, 3)
-local stockBox = createInputBox("Stock Amount:", 100000, 4)
-local energyBox = createInputBox("Energy Amt:", 7925.2, 5)
-local routeBox = createInputBox("Route ID:", 1, 6) -- Added input box for Route ID
+local fuelBox = createInputBox("Fuel Amount:", 96000, 4)
+local stockBox = createInputBox("Stock Amount:", 100000, 5)
+local energyBox = createInputBox("Energy Amt:", 7925.2, 6)
+local routeBox = createInputBox("Route ID:", 1, 7)
 
 local CONFIG_FILE = "ShipAutoConfig.json"
 local canSaveFiles = (writefile and readfile and isfile) or false
@@ -194,7 +207,8 @@ local function saveConfig()
             fuel = fuelBox.Text,
             stock = stockBox.Text,
             energy = energyBox.Text,
-            route = routeBox.Text
+            route = routeBox.Text,
+            nuclear = nuclearActive
         }
         writefile(CONFIG_FILE, HttpService:JSONEncode(configData))
     end)
@@ -209,6 +223,16 @@ local function loadConfig()
             if decoded.stock then stockBox.Text = tostring(decoded.stock) end
             if decoded.energy then energyBox.Text = tostring(decoded.energy) end
             if decoded.route then routeBox.Text = tostring(decoded.route) end
+            if decoded.nuclear ~= nil then
+                nuclearActive = decoded.nuclear
+                if nuclearActive then
+                    nuclearToggleBtn.Text = "Nuclear Reactor Mode: ON"
+                    nuclearToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 180, 80)
+                else
+                    nuclearToggleBtn.Text = "Nuclear Reactor Mode: OFF"
+                    nuclearToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+                end
+            end
         end
     end)
 end
@@ -233,6 +257,18 @@ toggleBtn.MouseButton1Click:Connect(function()
     end
 end)
 
+nuclearToggleBtn.MouseButton1Click:Connect(function()
+    nuclearActive = not nuclearActive
+    if nuclearActive then
+        nuclearToggleBtn.Text = "Nuclear Reactor Mode: ON"
+        nuclearToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 180, 80)
+    else
+        nuclearToggleBtn.Text = "Nuclear Reactor Mode: OFF"
+        nuclearToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+    end
+    saveConfig()
+end)
+
 closeBtn.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
 end)
@@ -254,7 +290,6 @@ local function runPortSequence(shipId)
             shipEvent:FireServer("RequestTug")
             task.wait(0.1)
             
-            -- Passenger loading/unloading section + attached Energy buy
             passengerEvent:FireServer(targetId, "UnloadPassengersOfShip")
             task.wait(0.08)
             passengerEvent:FireServer(targetId, "LoadPassengersOfShip")
@@ -264,15 +299,18 @@ local function runPortSequence(shipId)
             shipEvent:FireServer("BuyEnergy", energyAmount)
             task.wait(0.05)
             
-            local fuelAmount = tonumber(fuelBox.Text) or 96000
             local stockAmount = tonumber(stockBox.Text) or 100000
             
-            shipEvent:FireServer("BuyFuel", fuelAmount)
-            task.wait(0.05)
+            -- Skip buying fuel if Nuclear Reactor Mode is ON
+            if not nuclearActive then
+                local fuelAmount = tonumber(fuelBox.Text) or 96000
+                shipEvent:FireServer("BuyFuel", fuelAmount)
+                task.wait(0.05)
+            end
+            
             shipEvent:FireServer("BuyStock", stockAmount)
             task.wait(2.5)
             
-            -- Activates whatever route number is typed into the GUI box
             shipEvent:FireServer("ActivateRoute", targetId, targetRoute)
         end)
     end)
@@ -377,7 +415,18 @@ if shipEvent and passengerEvent then
         
         if not isSmartActive or isRestocking then return end
         
-        if (actionType == "Fuel" or actionType == "Stock") and type(currentVal) == "number" and currentVal <= LOW_THRESHOLD then
+        local shouldTriggerRestock = false
+        if nuclearActive then
+            if actionType == "Stock" and type(currentVal) == "number" and currentVal <= LOW_THRESHOLD then
+                shouldTriggerRestock = true
+            end
+        else
+            if (actionType == "Fuel" or actionType == "Stock") and type(currentVal) == "number" and currentVal <= LOW_THRESHOLD then
+                shouldTriggerRestock = true
+            end
+        end
+        
+        if shouldTriggerRestock then
             isRestocking = true
             runPortSequence(shipId)
             
