@@ -13,15 +13,69 @@ end
 
 local playerGui = localPlayer:WaitForChild("PlayerGui")
 
-local oldGui = playerGui:FindFirstChild("ShipAutoRestockGui") or CoreGui:FindFirstChild("ShipAutoRestockGui")
+local oldGui = playerGui:FindFirstChild("Cruise Line Tycoon AFK Script") or CoreGui:FindFirstChild("Cruise Line Tycoon AFK Script")
 if oldGui then oldGui:Destroy() end
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "ShipAutoRestockGui"
+ScreenGui.Name = "Cruise Line Tycoon AFK Script"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.Parent = playerGui
+local CONFIG_FILE_NAME = "cruiseline_config.json"
+local toggleBtn, nuclearToggleBtn
+local fuelBox, stockBox, energyBox, routeBox
+local configStatusLabel
+local isSmartActive = false
+local nuclearActive = true
+local cachedShipId = "0lAl"
 
+local function saveConfig()
+    local success = pcall(function()
+        local data = {
+            FuelAmount = fuelBox.Text,
+            StockAmount = stockBox.Text,
+            EnergyAmount = energyBox.Text,
+            RouteID = routeBox.Text,
+            AutomationActive = isSmartActive,
+            NuclearMode = nuclearActive
+        }
+        if writefile then
+            writefile(CONFIG_FILE_NAME, HttpService:JSONEncode(data))
+        end
+    end)
+    return success
+end
+
+local function loadConfig()
+    local success = pcall(function()
+        if isfile and isfile(CONFIG_FILE_NAME) then
+            local decoded = HttpService:JSONDecode(readfile(CONFIG_FILE_NAME))
+            if decoded then
+                if fuelBox and decoded.FuelAmount then fuelBox.Text = tostring(decoded.FuelAmount) end
+                if stockBox and decoded.StockAmount then stockBox.Text = tostring(decoded.StockAmount) end
+                if energyBox and decoded.EnergyAmount then energyBox.Text = tostring(decoded.EnergyAmount) end
+                if routeBox and decoded.RouteID then routeBox.Text = tostring(decoded.RouteID) end
+                
+                if decoded.NuclearMode ~= nil then
+                    nuclearActive = decoded.NuclearMode
+                    if nuclearToggleBtn then
+                        nuclearToggleBtn.Text = nuclearActive and "Nuclear Reactor Mode(Disgards fuel automation): ON" or "Nuclear Reactor Mode(Disgards fuel automation): OFF"
+                        nuclearToggleBtn.BackgroundColor3 = nuclearActive and Color3.fromRGB(50, 180, 80) or Color3.fromRGB(180, 50, 50)
+                    end
+                end
+                
+                if decoded.AutomationActive ~= nil then
+                    isSmartActive = decoded.AutomationActive
+                    if toggleBtn then
+                        toggleBtn.Text = isSmartActive and "Automation: ACTIVE" or "Automation: OFF"
+                        toggleBtn.BackgroundColor3 = isSmartActive and Color3.fromRGB(50, 180, 80) or Color3.fromRGB(180, 50, 50)
+                    end
+                end
+            end
+        end
+    end)
+    return success
+end
 local function triggerAntiAfk()
     pcall(function()
         VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Space, false, game)
@@ -40,11 +94,10 @@ task.spawn(function()
         triggerAntiAfk()
     end
 end)
-
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 220, 0, 340) 
-mainFrame.Position = UDim2.new(1, -240, 1, -365)
+mainFrame.Size = UDim2.new(0, 220, 0, 440) -- Expanded height to fit config buttons
+mainFrame.Position = UDim2.new(1, -240, 1, -465)
 mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 mainFrame.BackgroundTransparency = 0.05
 mainFrame.BorderSizePixel = 0
@@ -63,7 +116,7 @@ local titleLabel = Instance.new("TextLabel")
 titleLabel.Size = UDim2.new(1, -40, 1, 0)
 titleLabel.Position = UDim2.new(0, 10, 0, 0)
 titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "Cruise Line Tycoon Ship Auto"
+titleLabel.Text = "Cruise Line Tycoon Auto"
 titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 titleLabel.Font = Enum.Font.SourceSansBold
 titleLabel.TextSize = 14
@@ -106,17 +159,19 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
-local contentContainer = Instance.new("Frame")
+local contentContainer = Instance.new("ScrollingFrame")
 contentContainer.Size = UDim2.new(1, -20, 1, -45)
 contentContainer.Position = UDim2.new(0, 10, 0, 38)
 contentContainer.BackgroundTransparency = 1
+contentContainer.CanvasSize = UDim2.new(0, 0, 0, 480)
+contentContainer.ScrollBarThickness = 4
 contentContainer.Parent = mainFrame
 
 local layout = Instance.new("UIListLayout", contentContainer)
 layout.SortOrder = Enum.SortOrder.LayoutOrder
 layout.Padding = UDim.new(0, 6)
 
-local toggleBtn = Instance.new("TextButton")
+toggleBtn = Instance.new("TextButton")
 toggleBtn.Size = UDim2.new(1, 0, 0, 32)
 toggleBtn.LayoutOrder = 1
 toggleBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
@@ -127,9 +182,7 @@ toggleBtn.TextSize = 13
 toggleBtn.Parent = contentContainer
 Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 6)
 
--- Nuclear Reactor Mode Toggle
-local nuclearActive = true
-local nuclearToggleBtn = Instance.new("TextButton")
+nuclearToggleBtn = Instance.new("TextButton")
 nuclearToggleBtn.Size = UDim2.new(1, 0, 0, 30)
 nuclearToggleBtn.LayoutOrder = 2
 nuclearToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 180, 80)
@@ -180,42 +233,92 @@ local function createInputBox(labelText, defaultVal, order)
     box.Parent = container
     Instance.new("UICorner", box).CornerRadius = UDim.new(0, 4)
     
+    box.FocusLost:Connect(function()
+        saveConfig()
+    end)
+    
     return box
 end
 
-local fuelBox = createInputBox("Fuel Amount:", 96000, 4)
-local stockBox = createInputBox("Stock Amount:", 100000, 5)
-local energyBox = createInputBox("Energy Amt:", 7925.2, 6)
-local routeBox = createInputBox("Route ID:", 1, 7)
+fuelBox = createInputBox("Fuel Amount:", 0, 4)
+stockBox = createInputBox("Stock Amount:", 551000, 5)
+energyBox = createInputBox("Energy Amt:", 0, 6)
+routeBox = createInputBox("Route ID:", 3 7)
 
-local isSmartActive = false
-local cachedShipId = "0lAl"
+-- Config Save/Load Buttons
+local saveConfigBtn = Instance.new("TextButton")
+saveConfigBtn.Size = UDim2.new(1, 0, 0, 32)
+saveConfigBtn.LayoutOrder = 8
+saveConfigBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 80)
+saveConfigBtn.Text = "Save Config"
+saveConfigBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+saveConfigBtn.Font = Enum.Font.SourceSansBold
+saveConfigBtn.TextSize = 13
+saveConfigBtn.Parent = contentContainer
+Instance.new("UICorner", saveConfigBtn).CornerRadius = UDim.new(0, 6)
+
+local loadConfigBtn = Instance.new("TextButton")
+loadConfigBtn.Size = UDim2.new(1, 0, 0, 32)
+loadConfigBtn.LayoutOrder = 9
+loadConfigBtn.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
+loadConfigBtn.Text = "Load Config"
+loadConfigBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+loadConfigBtn.Font = Enum.Font.SourceSansBold
+loadConfigBtn.TextSize = 13
+loadConfigBtn.Parent = contentContainer
+Instance.new("UICorner", loadConfigBtn).CornerRadius = UDim.new(0, 6)
+
+configStatusLabel = Instance.new("TextLabel")
+configStatusLabel.Size = UDim2.new(1, 0, 0, 40)
+configStatusLabel.LayoutOrder = 10
+configStatusLabel.BackgroundTransparency = 1
+configStatusLabel.Text = "Config system active."
+configStatusLabel.TextColor3 = Color3.fromRGB(170, 170, 170)
+configStatusLabel.Font = Enum.Font.SourceSans
+configStatusLabel.TextSize = 11
+configStatusLabel.TextWrapped = true
+configStatusLabel.Parent = contentContainer
+
+saveConfigBtn.MouseButton1Click:Connect(function()
+    if saveConfig() then
+        configStatusLabel.Text = "Status: Config saved successfully!"
+        configStatusLabel.TextColor3 = Color3.fromRGB(80, 255, 80)
+    else
+        configStatusLabel.Text = "Status: Save failed!"
+        configStatusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
+    end
+end)
+
+loadConfigBtn.MouseButton1Click:Connect(function()
+    if loadConfig() then
+        configStatusLabel.Text = "Status: Config loaded successfully!"
+        configStatusLabel.TextColor3 = Color3.fromRGB(80, 255, 80)
+    else
+        configStatusLabel.Text = "Status: No config found or failed!"
+        configStatusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
+    end
+end)
 
 toggleBtn.MouseButton1Click:Connect(function()
     isSmartActive = not isSmartActive
-    if isSmartActive then
-        toggleBtn.Text = "Automation: ACTIVE"
-        toggleBtn.BackgroundColor3 = Color3.fromRGB(50, 180, 80)
-    else
-        toggleBtn.Text = "Automation: OFF"
-        toggleBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
-    end
+    toggleBtn.Text = isSmartActive and "Automation: ACTIVE" or "Automation: OFF"
+    toggleBtn.BackgroundColor3 = isSmartActive and Color3.fromRGB(50, 180, 80) or Color3.fromRGB(180, 50, 50)
+    saveConfig()
 end)
 
 nuclearToggleBtn.MouseButton1Click:Connect(function()
     nuclearActive = not nuclearActive
-    if nuclearActive then
-        nuclearToggleBtn.Text = "Nuclear Reactor Mode: ON"
-        nuclearToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 180, 80)
-    else
-        nuclearToggleBtn.Text = "Nuclear Reactor Mode: OFF"
-        nuclearToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
-    end
+    nuclearToggleBtn.Text = nuclearActive and "Nuclear Reactor Mode: ON" or "Nuclear Reactor Mode: OFF"
+    nuclearToggleBtn.BackgroundColor3 = nuclearActive and Color3.fromRGB(50, 180, 80) or Color3.fromRGB(180, 50, 50)
+    saveConfig()
 end)
 
 closeBtn.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
 end)
+
+-- Attempt to load config on start
+loadConfig()
 
 local remoteFolder = ReplicatedStorage:WaitForChild("RemoteEvents", 5)
 local shipEvent = remoteFolder and remoteFolder:WaitForChild("ShipEvent", 5)
@@ -245,7 +348,6 @@ local function runPortSequence(shipId)
             
             local stockAmount = tonumber(stockBox.Text) or 100000
             
-            -- Skip buying fuel if Nuclear Reactor Mode is ON
             if not nuclearActive then
                 local fuelAmount = tonumber(fuelBox.Text) or 96000
                 shipEvent:FireServer("BuyFuel", fuelAmount)
@@ -307,7 +409,7 @@ end)
 local LOW_THRESHOLD = 2000 
 local isRestocking = false
 local lastRestockTime = 0
-local RESTOCK_COOLDOWN = 1800 -- 30 minutes cooldown (1800 seconds)
+local RESTOCK_COOLDOWN = 1800
 local lastInstantPassengerAction = 0
 
 if shipEvent and passengerEvent then
@@ -351,7 +453,6 @@ if shipEvent and passengerEvent then
         
         if not isSmartActive or isRestocking then return end
         
-        -- Check 30-minute cooldown
         if (tick() - lastRestockTime) < RESTOCK_COOLDOWN then
             return
         end
@@ -379,3 +480,5 @@ if shipEvent and passengerEvent then
         end
     end)
 end
+
+print("Cruise Line Tycoon AFK Script loaded successfully!")
