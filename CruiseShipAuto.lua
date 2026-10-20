@@ -272,10 +272,181 @@ closeBtn.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
 end)
 
-local remoteFolder = ReplicatedStorage:WaitForChild("RemoteEvents", 5)
-local shipEvent = remoteFolder and remoteFolder:WaitForChild("ShipEvent", 5)
-local passengerEvent = remoteFolder and remoteFolder:WaitForChild("PassengerEvent", 5)
+-- Safely fetch remotes with fallback loops so they never return nil
+local remoteFolder = ReplicatedStorage:WaitForChild("RemoteEvents", 10)
+local shipEvent = remoteFolder and remoteFolder:WaitForChild("ShipEvent", 10)
+local passengerEvent = remoteFolder and remoteFolder:WaitForChild("PassengerEvent", 10)
 
 local function runPortSequence(shipId)
-    if not shipEvent or not passengerEvent then return end
+    if not shipEvent or not passengerEvent then 
+        warn("[ShipAuto] Remotes missing, cannot run port sequence!")
+        return 
+    end
     task.spawn(function()
+        pcall(function()
+            local targetId = shipId or cachedShipId or "0lAl"
+            local targetRoute = tonumber(routeBox.Text) or 1
+            
+            shipEvent:FireServer("DeactivateRoute", targetId)
+            task.wait(0.1)
+            
+            shipEvent:FireServer("RequestTug")
+            task.wait(0.1)
+            
+            passengerEvent:FireServer(targetId, "UnloadPassengersOfShip")
+            task.wait(0.08)
+            passengerEvent:FireServer(targetId, "LoadPassengersOfShip")
+            task.wait(0.08)
+            
+            local energyAmount = tonumber(energyBox.Text) or 7925.2
+            shipEvent:FireServer("BuyEnergy", energyAmount)
+            task.wait(0.05)
+            
+            local stockAmount = tonumber(stockBox.Text) or 100000
+            
+            if not nuclearActive then
+                local fuelAmount = tonumber(fuelBox.Text) or 96000
+                shipEvent:FireServer("BuyFuel", fuelAmount)
+                task.wait(0.05)
+            end
+            
+            shipEvent:FireServer("BuyStock", stockAmount)
+            task.wait(2.5)
+            
+            shipEvent:FireServer("ActivateRoute", targetId, targetRoute)
+        end)
+    end)
+end
+
+testBtn.MouseButton1Click:Connect(function()
+    runPortSequence(cachedShipId)
+end)
+
+local targetPopups = {"ArrivalFare", "DailyFare"}
+local OFFSET_Y = -40
+
+task.spawn(function()
+    while ScreenGui.Parent do
+        task.wait(0.4)
+        if isSmartActive then
+            pcall(function()
+                for _, popupName in ipairs(targetPopups) do
+                    local popupGui = playerGui:FindFirstChild(popupName)
+                    
+                    if popupGui and popupGui:IsA("ScreenGui") and popupGui.Enabled then
+                        local windowFrame = popupGui:FindFirstChild("MainFrame", true)
+                        
+                        if windowFrame and windowFrame:IsA("GuiObject") and windowFrame.Visible then
+                            local fPos = windowFrame.AbsolutePosition
+                            local fSize = windowFrame.AbsoluteSize
+                            
+                            if fSize.X > 50 and fSize.Y > 50 and fPos.X > 0 and fPos.Y > 0 then
+                                local clickX = fPos.X + (fSize.X / 2)
+                                local clickY = fPos.Y + fSize.Y - OFFSET_Y
+                                
+                                task.wait(0.05)
+                                
+                                local continueBtn = popupGui:FindFirstChild("Continue", true)
+                                if continueBtn then
+                                    pcall(function()
+                                        if firesignal then
+                                            firesignal(continueBtn.MouseButton1Click)
+                                            firesignal(continueBtn.Activated)
+                                        end
+                                    end)
+                                end
+                                
+                                pcall(function()
+                                    VirtualInputManager:SendMouseButtonEvent(clickX, clickY, 0, true, game, 1)
+                                    task.wait(0.05)
+                                    VirtualInputManager:SendMouseButtonEvent(clickX, clickY, 0, false, game, 1)
+                                end)
+                                
+                                task.wait(1.0)
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+local LOW_THRESHOLD = 2000 
+local isRestocking = false
+local lastRestockTime = 0
+local RESTOCK_COOLDOWN = 1800 -- 30 minutes cooldown
+local lastInstantPassengerAction = 0
+
+if shipEvent and passengerEvent then
+    shipEvent.OnClientEvent:Connect(function(...)
+        if not ScreenGui.Parent then return end
+        
+        local val_args = {...}
+        local actionType = val_args[1] 
+        local shipId     = val_args[2] 
+        local currentVal = val_args[3]
+        
+        if type(shipId) == "string" and #shipId > 0 then
+            cachedShipId = shipId
+        end
+        
+        if type(actionType) == "string" then
+            local actionStr = string.lower(actionType)
+            local isArrival = string.find(actionStr, "dock") or string.find(actionStr, "arrive") or string.find(actionStr, "port")
+            local isDeparture = string.find(actionStr, "leave") or string.find(actionStr, "depart") or string.find(actionStr, "exit")
+            
+            if isArrival and not isDeparture then
+                if (tick() - lastInstantPassengerAction > 5) then
+                    lastInstantPassengerAction = tick()
+                    task.spawn(function()
+                        pcall(function()
+                            local targetId = shipId or cachedShipId
+                            if passengerEvent then
+                                passengerEvent:FireServer(targetId, "UnloadPassengersOfShip")
+                                task.wait(0.08)
+                                passengerEvent:FireServer(targetId, "LoadPassengersOfShip")
+                            end
+                            
+                            if isSmartActive then
+                                task.wait(0.08)
+                                local energyAmount = tonumber(energyBox.Text) or 7925.2
+                                if shipEvent then
+                                    shipEvent:FireServer("BuyEnergy", energyAmount)
+                                end
+                            end
+                        end)
+                    end)
+                end
+            end
+        end
+        
+        if not isSmartActive or isRestocking then return end
+        
+        if (tick() - lastRestockTime) < RESTOCK_COOLDOWN then
+            return
+        end
+        
+        local shouldTriggerRestock = false
+        if nuclearActive then
+            if actionType == "Stock" and type(currentVal) == "number" and currentVal <= LOW_THRESHOLD then
+                shouldTriggerRestock = true
+            end
+        else
+            if (actionType == "Fuel" or actionType == "Stock") and type(currentVal) == "number" and currentVal <= LOW_THRESHOLD then
+                shouldTriggerRestock = true
+            end
+        end
+        
+        if shouldTriggerRestock then
+            isRestocking = true
+            lastRestockTime = tick()
+            runPortSequence(shipId)
+            
+            task.spawn(function()
+                task.wait(15)
+                isRestocking = false
+            end)
+        end
+    end)
+end
