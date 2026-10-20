@@ -1,18 +1,3 @@
-local execName = ""
-pcall(function()
-    if type(identifyexecutor) == "function" then
-        execName = identifyexecutor()
-    elseif type(getexecutorname) == "function" then
-        execName = getexecutorname()
-    else
-        execName = "Unknown"
-    end
-end)
-
-if string.find(string.lower(tostring(execName)), "xeno") then
-    return
-end
-
 local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
@@ -78,7 +63,7 @@ local titleLabel = Instance.new("TextLabel")
 titleLabel.Size = UDim2.new(1, -40, 1, 0)
 titleLabel.Position = UDim2.new(0, 10, 0, 0)
 titleLabel.BackgroundTransparency = 1
-titleLabel.Text = "Ship Auto"
+titleLabel.Text = "Ship Auto (Delta)"
 titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
 titleLabel.Font = Enum.Font.SourceSansBold
 titleLabel.TextSize = 14
@@ -202,52 +187,6 @@ local stockBox = createInputBox("Stock Amount:", 100000, 5)
 local energyBox = createInputBox("Energy Amt:", 7925.2, 6)
 local routeBox = createInputBox("Route ID:", 1, 7)
 
-local CONFIG_FILE = "ShipAutoConfig.json"
-local canSaveFiles = (type(writefile) == "function" and type(readfile) == "function" and type(isfile) == "function")
-
-local function saveConfig()
-    if not canSaveFiles then return end
-    pcall(function()
-        local configData = {
-            fuel = fuelBox.Text,
-            stock = stockBox.Text,
-            energy = energyBox.Text,
-            route = routeBox.Text,
-            nuclear = nuclearActive
-        }
-        writefile(CONFIG_FILE, HttpService:JSONEncode(configData))
-    end)
-end
-
-local function loadConfig()
-    if not canSaveFiles then return end
-    pcall(function()
-        if isfile(CONFIG_FILE) then
-            local decoded = HttpService:JSONDecode(readfile(CONFIG_FILE))
-            if decoded.fuel then fuelBox.Text = tostring(decoded.fuel) end
-            if decoded.stock then stockBox.Text = tostring(decoded.stock) end
-            if decoded.energy then energyBox.Text = tostring(decoded.energy) end
-            if decoded.route then routeBox.Text = tostring(decoded.route) end
-            if decoded.nuclear ~= nil then
-                nuclearActive = decoded.nuclear
-                if nuclearActive then
-                    nuclearToggleBtn.Text = "Nuclear Reactor Mode: ON"
-                    nuclearToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 180, 80)
-                else
-                    nuclearToggleBtn.Text = "Nuclear Reactor Mode: OFF"
-                    nuclearToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
-                end
-            end
-        end
-    end)
-end
-
-fuelBox.FocusLost:Connect(saveConfig)
-stockBox.FocusLost:Connect(saveConfig)
-energyBox.FocusLost:Connect(saveConfig)
-routeBox.FocusLost:Connect(saveConfig)
-loadConfig()
-
 local isSmartActive = false
 local cachedShipId = "0lAl"
 
@@ -271,7 +210,6 @@ nuclearToggleBtn.MouseButton1Click:Connect(function()
         nuclearToggleBtn.Text = "Nuclear Reactor Mode: OFF"
         nuclearToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
     end
-    saveConfig()
 end)
 
 closeBtn.MouseButton1Click:Connect(function()
@@ -347,16 +285,6 @@ task.spawn(function()
                                 local clickY = fPos.Y + fSize.Y - OFFSET_Y
                                 
                                 task.wait(0.05)
-                                
-                                local continueBtn = popupGui:FindFirstChild("Continue", true)
-                                if continueBtn then
-                                    pcall(function()
-                                        if type(firesignal) == "function" then
-                                            firesignal(continueBtn.MouseButton1Click)
-                                            firesignal(continueBtn.Activated)
-                                        end
-                                    end)
-                                end
                                 
                                 pcall(function()
                                     VirtualInputManager:SendMouseButtonEvent(clickX, clickY, 0, true, game, 1)
