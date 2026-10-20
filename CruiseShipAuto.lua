@@ -4,7 +4,6 @@ local UserInputService = game:GetService("UserInputService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HttpService = game:GetService("HttpService")
-local RunService = game:GetService("RunService")
 
 local localPlayer = Players.LocalPlayer
 while not localPlayer do
@@ -109,27 +108,6 @@ mainFrame.Parent = ScreenGui
 
 Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 10)
 
--- Floating Tooltip Frame
-local tooltip = Instance.new("Frame")
-tooltip.Name = "Tooltip"
-tooltip.Size = UDim2.new(0, 165, 0, 26)
-tooltip.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-tooltip.BorderSizePixel = 0
-tooltip.Visible = false
-tooltip.ZIndex = 200
-tooltip.Parent = ScreenGui
-Instance.new("UICorner", tooltip).CornerRadius = UDim.new(0, 4)
-
-local tooltipText = Instance.new("TextLabel")
-tooltipText.Size = UDim2.new(1, 0, 1, 0)
-tooltipText.BackgroundTransparency = 1
-tooltipText.Text = "Discards fuel automation"
-tooltipText.TextColor3 = Color3.fromRGB(220, 220, 220)
-tooltipText.Font = Enum.Font.SourceSansItalic
-tooltipText.TextSize = 11
-tooltipText.ZIndex = 201
-tooltipText.Parent = tooltip
-
 local topBar = Instance.new("Frame")
 topBar.Size = UDim2.new(1, 0, 0, 30)
 topBar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
@@ -218,23 +196,20 @@ nuclearToggleBtn.TextSize = 13
 nuclearToggleBtn.Parent = contentContainer
 Instance.new("UICorner", nuclearToggleBtn).CornerRadius = UDim.new(0, 6)
 
--- Smooth Floating Tooltip Logic
-local isHoveringNuclear = false
+-- Hold-to-View Description Logic
+local isHoldingNuclear = false
 
-nuclearToggleBtn.MouseEnter:Connect(function()
-    isHoveringNuclear = true
-    tooltip.Visible = true
+nuclearToggleBtn.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        isHoldingNuclear = true
+        nuclearToggleBtn.Text = "Discards fuel automation"
+    end
 end)
 
-nuclearToggleBtn.MouseLeave:Connect(function()
-    isHoveringNuclear = false
-    tooltip.Visible = false
-end)
-
-RunService.RenderStepped:Connect(function()
-    if isHoveringNuclear and tooltip.Visible then
-        local mousePos = UserInputService:GetMouseLocation()
-        tooltip.Position = UDim2.new(0, mousePos.X - ScreenGui.AbsolutePosition.X + 15, 0, mousePos.Y - ScreenGui.AbsolutePosition.Y + 15)
+nuclearToggleBtn.InputEnded:Connect(function(input)
+    if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and isHoldingNuclear then
+        isHoldingNuclear = false
+        nuclearToggleBtn.Text = nuclearActive and "Nuclear Mode: ON" or "Nuclear Mode: OFF"
     end
 end)
 
