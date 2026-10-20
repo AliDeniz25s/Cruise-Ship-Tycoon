@@ -4,6 +4,7 @@ local UserInputService = game:GetService("UserInputService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
 
 local localPlayer = Players.LocalPlayer
 while not localPlayer do
@@ -60,7 +61,7 @@ local function loadConfig()
                 if decoded.NuclearMode ~= nil then
                     nuclearActive = decoded.NuclearMode
                     if nuclearToggleBtn then
-                        nuclearToggleBtn.Text = nuclearActive and "Nuclear Reactor Mode: ON" or "Nuclear Reactor Mode: OFF"
+                        nuclearToggleBtn.Text = nuclearActive and "Nuclear Mode: ON" or "Nuclear Mode: OFF"
                         nuclearToggleBtn.BackgroundColor3 = nuclearActive and Color3.fromRGB(50, 180, 80) or Color3.fromRGB(180, 50, 50)
                     end
                 end
@@ -108,14 +109,14 @@ mainFrame.Parent = ScreenGui
 
 Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 10)
 
--- Hover Tooltip Frame
+-- Floating Tooltip Frame
 local tooltip = Instance.new("Frame")
 tooltip.Name = "Tooltip"
-tooltip.Size = UDim2.new(0, 160, 0, 24)
+tooltip.Size = UDim2.new(0, 165, 0, 26)
 tooltip.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
 tooltip.BorderSizePixel = 0
 tooltip.Visible = false
-tooltip.ZIndex = 10
+tooltip.ZIndex = 200
 tooltip.Parent = ScreenGui
 Instance.new("UICorner", tooltip).CornerRadius = UDim.new(0, 4)
 
@@ -123,10 +124,10 @@ local tooltipText = Instance.new("TextLabel")
 tooltipText.Size = UDim2.new(1, 0, 1, 0)
 tooltipText.BackgroundTransparency = 1
 tooltipText.Text = "Discards fuel automation"
-tooltipText.TextColor3 = Color3.fromRGB(200, 200, 200)
+tooltipText.TextColor3 = Color3.fromRGB(220, 220, 220)
 tooltipText.Font = Enum.Font.SourceSansItalic
 tooltipText.TextSize = 11
-tooltipText.ZIndex = 11
+tooltipText.ZIndex = 201
 tooltipText.Parent = tooltip
 
 local topBar = Instance.new("Frame")
@@ -210,23 +211,31 @@ nuclearToggleBtn = Instance.new("TextButton")
 nuclearToggleBtn.Size = UDim2.new(1, 0, 0, 30)
 nuclearToggleBtn.LayoutOrder = 2
 nuclearToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 180, 80)
-nuclearToggleBtn.Text = "Nuclear Reactor Mode: ON"
+nuclearToggleBtn.Text = "Nuclear Mode: ON"
 nuclearToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 nuclearToggleBtn.Font = Enum.Font.SourceSansBold
 nuclearToggleBtn.TextSize = 13
 nuclearToggleBtn.Parent = contentContainer
 Instance.new("UICorner", nuclearToggleBtn).CornerRadius = UDim.new(0, 6)
 
--- Hover behavior for nuclear button
+-- Smooth Floating Tooltip Logic
+local isHoveringNuclear = false
+
 nuclearToggleBtn.MouseEnter:Connect(function()
+    isHoveringNuclear = true
     tooltip.Visible = true
 end)
+
 nuclearToggleBtn.MouseLeave:Connect(function()
+    isHoveringNuclear = false
     tooltip.Visible = false
 end)
-nuclearToggleBtn.MouseMoved:Connect(function()
-    local mousePos = UserInputService:GetMouseLocation()
-    tooltip.Position = UDim2.new(0, mousePos.X - ScreenGui.AbsolutePosition.X + 15, 0, mousePos.Y - ScreenGui.AbsolutePosition.Y + 15)
+
+RunService.RenderStepped:Connect(function()
+    if isHoveringNuclear and tooltip.Visible then
+        local mousePos = UserInputService:GetMouseLocation()
+        tooltip.Position = UDim2.new(0, mousePos.X - ScreenGui.AbsolutePosition.X + 15, 0, mousePos.Y - ScreenGui.AbsolutePosition.Y + 15)
+    end
 end)
 
 local testBtn = Instance.new("TextButton")
@@ -343,7 +352,7 @@ end)
 
 nuclearToggleBtn.MouseButton1Click:Connect(function()
     nuclearActive = not nuclearActive
-    nuclearToggleBtn.Text = nuclearActive and "Nuclear Reactor Mode: ON" or "Nuclear Reactor Mode: OFF"
+    nuclearToggleBtn.Text = nuclearActive and "Nuclear Mode: ON" or "Nuclear Mode: OFF"
     nuclearToggleBtn.BackgroundColor3 = nuclearActive and Color3.fromRGB(50, 180, 80) or Color3.fromRGB(180, 50, 50)
     saveConfig()
 end)
