@@ -99,14 +99,35 @@ end)
 
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 220, 0, 470)
-mainFrame.Position = UDim2.new(1, -240, 1, -495)
+mainFrame.Size = UDim2.new(0, 220, 0, 440)
+mainFrame.Position = UDim2.new(1, -240, 1, -465)
 mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 mainFrame.BackgroundTransparency = 0.05
 mainFrame.BorderSizePixel = 0
 mainFrame.Parent = ScreenGui
 
 Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 10)
+
+-- Hover Tooltip Frame
+local tooltip = Instance.new("Frame")
+tooltip.Name = "Tooltip"
+tooltip.Size = UDim2.new(0, 160, 0, 24)
+tooltip.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+tooltip.BorderSizePixel = 0
+tooltip.Visible = false
+tooltip.ZIndex = 10
+tooltip.Parent = ScreenGui
+Instance.new("UICorner", tooltip).CornerRadius = UDim.new(0, 4)
+
+local tooltipText = Instance.new("TextLabel")
+tooltipText.Size = UDim2.new(1, 0, 1, 0)
+tooltipText.BackgroundTransparency = 1
+tooltipText.Text = "Discards fuel automation"
+tooltipText.TextColor3 = Color3.fromRGB(200, 200, 200)
+tooltipText.Font = Enum.Font.SourceSansItalic
+tooltipText.TextSize = 11
+tooltipText.ZIndex = 11
+tooltipText.Parent = tooltip
 
 local topBar = Instance.new("Frame")
 topBar.Size = UDim2.new(1, 0, 0, 30)
@@ -166,7 +187,7 @@ local contentContainer = Instance.new("ScrollingFrame")
 contentContainer.Size = UDim2.new(1, -20, 1, -45)
 contentContainer.Position = UDim2.new(0, 10, 0, 38)
 contentContainer.BackgroundTransparency = 1
-contentContainer.CanvasSize = UDim2.new(0, 0, 0, 520)
+contentContainer.CanvasSize = UDim2.new(0, 0, 0, 480)
 contentContainer.ScrollBarThickness = 4
 contentContainer.Parent = mainFrame
 
@@ -196,21 +217,21 @@ nuclearToggleBtn.TextSize = 13
 nuclearToggleBtn.Parent = contentContainer
 Instance.new("UICorner", nuclearToggleBtn).CornerRadius = UDim.new(0, 6)
 
--- Clean description label underneath
-local nuclearDesc = Instance.new("TextLabel")
-nuclearDesc.Size = UDim2.new(1, 0, 0, 18)
-nuclearDesc.LayoutOrder = 3
-nuclearDesc.BackgroundTransparency = 1
-nuclearDesc.Text = "(Discards fuel automation)"
-nuclearDesc.TextColor3 = Color3.fromRGB(160, 160, 160)
-nuclearDesc.Font = Enum.Font.SourceSansItalic
-nuclearDesc.TextSize = 11
-nuclearDesc.TextXAlignment = Enum.TextXAlignment.Center
-nuclearDesc.Parent = contentContainer
+-- Hover behavior for nuclear button
+nuclearToggleBtn.MouseEnter:Connect(function()
+    tooltip.Visible = true
+end)
+nuclearToggleBtn.MouseLeave:Connect(function()
+    tooltip.Visible = false
+end)
+nuclearToggleBtn.MouseMoved:Connect(function()
+    local mousePos = UserInputService:GetMouseLocation()
+    tooltip.Position = UDim2.new(0, mousePos.X - ScreenGui.AbsolutePosition.X + 15, 0, mousePos.Y - ScreenGui.AbsolutePosition.Y + 15)
+end)
 
 local testBtn = Instance.new("TextButton")
 testBtn.Size = UDim2.new(1, 0, 0, 30)
-testBtn.LayoutOrder = 4
+testBtn.LayoutOrder = 3
 testBtn.BackgroundColor3 = Color3.fromRGB(50, 100, 180)
 testBtn.Text = "Run Sequence"
 testBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -255,14 +276,14 @@ local function createInputBox(labelText, defaultVal, order)
     return box
 end
 
-fuelBox = createInputBox("Fuel Amount:", 0, 5)
-stockBox = createInputBox("Stock Amount:", 551000, 6)
-energyBox = createInputBox("Energy Amt:", 0, 7)
-routeBox = createInputBox("Route ID:", 3, 8)
+fuelBox = createInputBox("Fuel Amount:", 0, 4)
+stockBox = createInputBox("Stock Amount:", 551000, 5)
+energyBox = createInputBox("Energy Amt:", 0, 6)
+routeBox = createInputBox("Route ID:", 3, 7)
 
 local saveConfigBtn = Instance.new("TextButton")
 saveConfigBtn.Size = UDim2.new(1, 0, 0, 32)
-saveConfigBtn.LayoutOrder = 9
+saveConfigBtn.LayoutOrder = 8
 saveConfigBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 80)
 saveConfigBtn.Text = "Save Config"
 saveConfigBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -273,7 +294,7 @@ Instance.new("UICorner", saveConfigBtn).CornerRadius = UDim.new(0, 6)
 
 local loadConfigBtn = Instance.new("TextButton")
 loadConfigBtn.Size = UDim2.new(1, 0, 0, 32)
-loadConfigBtn.LayoutOrder = 10
+loadConfigBtn.LayoutOrder = 9
 loadConfigBtn.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
 loadConfigBtn.Text = "Load Config"
 loadConfigBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -284,7 +305,7 @@ Instance.new("UICorner", loadConfigBtn).CornerRadius = UDim.new(0, 6)
 
 configStatusLabel = Instance.new("TextLabel")
 configStatusLabel.Size = UDim2.new(1, 0, 0, 40)
-configStatusLabel.LayoutOrder = 11
+configStatusLabel.LayoutOrder = 10
 configStatusLabel.BackgroundTransparency = 1
 configStatusLabel.Text = "Config system active."
 configStatusLabel.TextColor3 = Color3.fromRGB(170, 170, 170)
