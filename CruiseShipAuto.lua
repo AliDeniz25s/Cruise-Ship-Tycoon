@@ -43,7 +43,7 @@ end)
 
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 220, 0, 340)
+mainFrame.Size = UDim2.new(0, 220, 0, 340) -- Increased height to fit the toggle
 mainFrame.Position = UDim2.new(1, -240, 1, -365)
 mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 mainFrame.BackgroundTransparency = 0.05
@@ -127,6 +127,7 @@ toggleBtn.TextSize = 13
 toggleBtn.Parent = contentContainer
 Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 6)
 
+-- Nuclear Reactor Mode Toggle
 local nuclearActive = true
 local nuclearToggleBtn = Instance.new("TextButton")
 nuclearToggleBtn.Size = UDim2.new(1, 0, 0, 30)
@@ -216,9 +217,9 @@ closeBtn.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
 end)
 
-local remoteFolder = ReplicatedStorage:WaitForChild("RemoteEvents", 10)
-local shipEvent = remoteFolder and remoteFolder:WaitForChild("ShipEvent", 10)
-local passengerEvent = remoteFolder and remoteFolder:WaitForChild("PassengerEvent", 10)
+local remoteFolder = ReplicatedStorage:WaitForChild("RemoteEvents", 5)
+local shipEvent = remoteFolder and remoteFolder:WaitForChild("ShipEvent", 5)
+local passengerEvent = remoteFolder and remoteFolder:WaitForChild("PassengerEvent", 5)
 
 local function runPortSequence(shipId)
     if not shipEvent or not passengerEvent then return end
@@ -244,6 +245,7 @@ local function runPortSequence(shipId)
             
             local stockAmount = tonumber(stockBox.Text) or 100000
             
+            -- Skip buying fuel if Nuclear Reactor Mode is ON
             if not nuclearActive then
                 local fuelAmount = tonumber(fuelBox.Text) or 96000
                 shipEvent:FireServer("BuyFuel", fuelAmount)
@@ -305,7 +307,7 @@ end)
 local LOW_THRESHOLD = 2000 
 local isRestocking = false
 local lastRestockTime = 0
-local RESTOCK_COOLDOWN = 1800 
+local RESTOCK_COOLDOWN = 1800 -- 30 minutes cooldown (1800 seconds)
 local lastInstantPassengerAction = 0
 
 if shipEvent and passengerEvent then
@@ -315,7 +317,7 @@ if shipEvent and passengerEvent then
         local val_args = {...}
         local actionType = val_args[1] 
         local shipId     = val_args[2] 
-        local currentVal = val_args[3]
+        local currentVal = val_args[4] 
         
         if type(shipId) == "string" and #shipId > 0 then
             cachedShipId = shipId
@@ -332,18 +334,14 @@ if shipEvent and passengerEvent then
                     task.spawn(function()
                         pcall(function()
                             local targetId = shipId or cachedShipId
-                            if passengerEvent then
-                                passengerEvent:FireServer(targetId, "UnloadPassengersOfShip")
-                                task.wait(0.08)
-                                passengerEvent:FireServer(targetId, "LoadPassengersOfShip")
-                            end
+                            passengerEvent:FireServer(targetId, "UnloadPassengersOfShip")
+                            task.wait(0.08)
+                            passengerEvent:FireServer(targetId, "LoadPassengersOfShip")
                             
                             if isSmartActive then
                                 task.wait(0.08)
                                 local energyAmount = tonumber(energyBox.Text) or 7925.2
-                                if shipEvent then
-                                    shipEvent:FireServer("BuyEnergy", energyAmount)
-                                end
+                                shipEvent:FireServer("BuyEnergy", energyAmount)
                             end
                         end)
                     end)
@@ -353,6 +351,7 @@ if shipEvent and passengerEvent then
         
         if not isSmartActive or isRestocking then return end
         
+        -- Check 30-minute cooldown
         if (tick() - lastRestockTime) < RESTOCK_COOLDOWN then
             return
         end
