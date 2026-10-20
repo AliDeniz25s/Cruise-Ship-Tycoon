@@ -1,9 +1,15 @@
 local execName = ""
 pcall(function()
-    execName = (identifyexecutor and identifyexecutor()) or (getexecutorname and getexecutorname()) or "Unknown"
+    if type(identifyexecutor) == "function" then
+        execName = identifyexecutor()
+    elseif type(getexecutorname) == "function" then
+        execName = getexecutorname()
+    else
+        execName = "Unknown"
+    end
 end)
 
-if string.find(string.lower(execName), "xeno") then
+if string.find(string.lower(tostring(execName)), "xeno") then
     return
 end
 
@@ -197,7 +203,7 @@ local energyBox = createInputBox("Energy Amt:", 7925.2, 6)
 local routeBox = createInputBox("Route ID:", 1, 7)
 
 local CONFIG_FILE = "ShipAutoConfig.json"
-local canSaveFiles = (writefile and readfile and isfile) or false
+local canSaveFiles = (type(writefile) == "function" and type(readfile) == "function" and type(isfile) == "function")
 
 local function saveConfig()
     if not canSaveFiles then return end
@@ -272,16 +278,12 @@ closeBtn.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
 end)
 
--- Safely fetch remotes with fallback loops so they never return nil
 local remoteFolder = ReplicatedStorage:WaitForChild("RemoteEvents", 10)
 local shipEvent = remoteFolder and remoteFolder:WaitForChild("ShipEvent", 10)
 local passengerEvent = remoteFolder and remoteFolder:WaitForChild("PassengerEvent", 10)
 
 local function runPortSequence(shipId)
-    if not shipEvent or not passengerEvent then 
-        warn("[ShipAuto] Remotes missing, cannot run port sequence!")
-        return 
-    end
+    if not shipEvent or not passengerEvent then return end
     task.spawn(function()
         pcall(function()
             local targetId = shipId or cachedShipId or "0lAl"
@@ -349,7 +351,7 @@ task.spawn(function()
                                 local continueBtn = popupGui:FindFirstChild("Continue", true)
                                 if continueBtn then
                                     pcall(function()
-                                        if firesignal then
+                                        if type(firesignal) == "function" then
                                             firesignal(continueBtn.MouseButton1Click)
                                             firesignal(continueBtn.Activated)
                                         end
@@ -375,7 +377,7 @@ end)
 local LOW_THRESHOLD = 2000 
 local isRestocking = false
 local lastRestockTime = 0
-local RESTOCK_COOLDOWN = 1800 -- 30 minutes cooldown
+local RESTOCK_COOLDOWN = 1800 
 local lastInstantPassengerAction = 0
 
 if shipEvent and passengerEvent then
