@@ -23,13 +23,19 @@ ScreenGui.IgnoreGuiInset = true
 ScreenGui.Parent = playerGui
 
 local CONFIG_FILE_NAME = "cruiseline_config.json"
-local toggleBtn, nuclearToggleBtn, cooldownToggleBtn, buyAllPortToggleBtn
+local toggleBtn, nuclearToggleBtn, cooldownToggleBtn
+local buyFuelPortBtn, buyStockPortBtn, buyEnergyPortBtn
 local fuelBox, stockBox, energyBox, routeBox
 local configStatusLabel
 local isSmartActive = false
 local nuclearActive = true
 local cooldownActive = true
-local buyAllEveryPort = false
+
+-- Separate individual supply toggles for Port arrival
+local autoBuyFuelOnPort = false
+local autoBuyStockOnPort = true
+local autoBuyEnergyOnPort = true
+
 local cachedShipId = "0lAl"
 
 local function saveConfig()
@@ -42,7 +48,9 @@ local function saveConfig()
             AutomationActive = isSmartActive,
             NuclearMode = nuclearActive,
             CooldownMode = cooldownActive,
-            BuyAllPortMode = buyAllEveryPort
+            AutoBuyFuelOnPort = autoBuyFuelOnPort,
+            AutoBuyStockOnPort = autoBuyStockOnPort,
+            AutoBuyEnergyOnPort = autoBuyEnergyOnPort
         }
         if writefile then
             writefile(CONFIG_FILE_NAME, HttpService:JSONEncode(data))
@@ -77,11 +85,27 @@ local function loadConfig()
                     end
                 end
 
-                if decoded.BuyAllPortMode ~= nil then
-                    buyAllEveryPort = decoded.BuyAllPortMode
-                    if buyAllPortToggleBtn then
-                        buyAllPortToggleBtn.Text = buyAllEveryPort and "Buy All Supplies On Port: ON" or "Buy All Supplies On Port: OFF"
-                        buyAllPortToggleBtn.BackgroundColor3 = buyAllEveryPort and Color3.fromRGB(50, 180, 80) or Color3.fromRGB(180, 50, 50)
+                if decoded.AutoBuyFuelOnPort ~= nil then
+                    autoBuyFuelOnPort = decoded.AutoBuyFuelOnPort
+                    if buyFuelPortBtn then
+                        buyFuelPortBtn.Text = autoBuyFuelOnPort and "Buy Fuel On Port: ON" or "Buy Fuel On Port: OFF"
+                        buyFuelPortBtn.BackgroundColor3 = autoBuyFuelOnPort and Color3.fromRGB(50, 180, 80) or Color3.fromRGB(180, 50, 50)
+                    end
+                end
+
+                if decoded.AutoBuyStockOnPort ~= nil then
+                    autoBuyStockOnPort = decoded.AutoBuyStockOnPort
+                    if buyStockPortBtn then
+                        buyStockPortBtn.Text = autoBuyStockOnPort and "Buy Stock On Port: ON" or "Buy Stock On Port: OFF"
+                        buyStockPortBtn.BackgroundColor3 = autoBuyStockOnPort and Color3.fromRGB(50, 180, 80) or Color3.fromRGB(180, 50, 50)
+                    end
+                end
+
+                if decoded.AutoBuyEnergyOnPort ~= nil then
+                    autoBuyEnergyOnPort = decoded.AutoBuyEnergyOnPort
+                    if buyEnergyPortBtn then
+                        buyEnergyPortBtn.Text = autoBuyEnergyOnPort and "Buy Energy On Port: ON" or "Buy Energy On Port: OFF"
+                        buyEnergyPortBtn.BackgroundColor3 = autoBuyEnergyOnPort and Color3.fromRGB(50, 180, 80) or Color3.fromRGB(180, 50, 50)
                     end
                 end
                 
@@ -119,8 +143,8 @@ end)
 
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 220, 0, 520)
-mainFrame.Position = UDim2.new(1, -240, 1, -545)
+mainFrame.Size = UDim2.new(0, 220, 0, 560)
+mainFrame.Position = UDim2.new(1, -240, 1, -585)
 mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 mainFrame.BackgroundTransparency = 0.05
 mainFrame.BorderSizePixel = 0
@@ -186,7 +210,7 @@ local contentContainer = Instance.new("ScrollingFrame")
 contentContainer.Size = UDim2.new(1, -20, 1, -45)
 contentContainer.Position = UDim2.new(0, 10, 0, 38)
 contentContainer.BackgroundTransparency = 1
-contentContainer.CanvasSize = UDim2.new(0, 0, 0, 560)
+contentContainer.CanvasSize = UDim2.new(0, 0, 0, 620)
 contentContainer.ScrollBarThickness = 4
 contentContainer.Parent = mainFrame
 
@@ -227,16 +251,39 @@ cooldownToggleBtn.TextSize = 13
 cooldownToggleBtn.Parent = contentContainer
 Instance.new("UICorner", cooldownToggleBtn).CornerRadius = UDim.new(0, 6)
 
-buyAllPortToggleBtn = Instance.new("TextButton")
-buyAllPortToggleBtn.Size = UDim2.new(1, 0, 0, 30)
-buyAllPortToggleBtn.LayoutOrder = 4
-buyAllPortToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
-buyAllPortToggleBtn.Text = "Buy All Supplies On Port: OFF"
-buyAllPortToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-buyAllPortToggleBtn.Font = Enum.Font.SourceSansBold
-buyAllPortToggleBtn.TextSize = 12
-buyAllPortToggleBtn.Parent = contentContainer
-Instance.new("UICorner", buyAllPortToggleBtn).CornerRadius = UDim.new(0, 6)
+-- 3 Individual Port Supply Toggles
+buyStockPortBtn = Instance.new("TextButton")
+buyStockPortBtn.Size = UDim2.new(1, 0, 0, 28)
+buyStockPortBtn.LayoutOrder = 4
+buyStockPortBtn.BackgroundColor3 = Color3.fromRGB(50, 180, 80)
+buyStockPortBtn.Text = "Buy Stock On Port: ON"
+buyStockPortBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+buyStockPortBtn.Font = Enum.Font.SourceSansBold
+buyStockPortBtn.TextSize = 12
+buyStockPortBtn.Parent = contentContainer
+Instance.new("UICorner", buyStockPortBtn).CornerRadius = UDim.new(0, 6)
+
+buyEnergyPortBtn = Instance.new("TextButton")
+buyEnergyPortBtn.Size = UDim2.new(1, 0, 0, 28)
+buyEnergyPortBtn.LayoutOrder = 5
+buyEnergyPortBtn.BackgroundColor3 = Color3.fromRGB(50, 180, 80)
+buyEnergyPortBtn.Text = "Buy Energy On Port: ON"
+buyEnergyPortBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+buyEnergyPortBtn.Font = Enum.Font.SourceSansBold
+buyEnergyPortBtn.TextSize = 12
+buyEnergyPortBtn.Parent = contentContainer
+Instance.new("UICorner", buyEnergyPortBtn).CornerRadius = UDim.new(0, 6)
+
+buyFuelPortBtn = Instance.new("TextButton")
+buyFuelPortBtn.Size = UDim2.new(1, 0, 0, 28)
+buyFuelPortBtn.LayoutOrder = 6
+buyFuelPortBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+buyFuelPortBtn.Text = "Buy Fuel On Port: OFF"
+buyFuelPortBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+buyFuelPortBtn.Font = Enum.Font.SourceSansBold
+buyFuelPortBtn.TextSize = 12
+buyFuelPortBtn.Parent = contentContainer
+Instance.new("UICorner", buyFuelPortBtn).CornerRadius = UDim.new(0, 6)
 
 -- Hold-to-View Description Logic for Nuclear Button
 local isHoldingNuclear = false
@@ -257,7 +304,7 @@ end)
 
 local testBtn = Instance.new("TextButton")
 testBtn.Size = UDim2.new(1, 0, 0, 30)
-testBtn.LayoutOrder = 5
+testBtn.LayoutOrder = 7
 testBtn.BackgroundColor3 = Color3.fromRGB(50, 100, 180)
 testBtn.Text = "Run Sequence"
 testBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -302,14 +349,14 @@ local function createInputBox(labelText, defaultVal, order)
     return box
 end
 
-fuelBox = createInputBox("Fuel Amount:", 0, 6)
-stockBox = createInputBox("Stock Amount:", 551000, 7)
-energyBox = createInputBox("Energy Amt:", 0, 8)
-routeBox = createInputBox("Route ID:", 3, 9)
+fuelBox = createInputBox("Fuel Amount:", 0, 8)
+stockBox = createInputBox("Stock Amount:", 551000, 9)
+energyBox = createInputBox("Energy Amt:", 0, 10)
+routeBox = createInputBox("Route ID:", 3, 11)
 
 local saveConfigBtn = Instance.new("TextButton")
 saveConfigBtn.Size = UDim2.new(1, 0, 0, 32)
-saveConfigBtn.LayoutOrder = 10
+saveConfigBtn.LayoutOrder = 12
 saveConfigBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 80)
 saveConfigBtn.Text = "Save Config"
 saveConfigBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -320,7 +367,7 @@ Instance.new("UICorner", saveConfigBtn).CornerRadius = UDim.new(0, 6)
 
 local loadConfigBtn = Instance.new("TextButton")
 loadConfigBtn.Size = UDim2.new(1, 0, 0, 32)
-loadConfigBtn.LayoutOrder = 11
+loadConfigBtn.LayoutOrder = 13
 loadConfigBtn.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
 loadConfigBtn.Text = "Load Config"
 loadConfigBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -331,7 +378,7 @@ Instance.new("UICorner", loadConfigBtn).CornerRadius = UDim.new(0, 6)
 
 configStatusLabel = Instance.new("TextLabel")
 configStatusLabel.Size = UDim2.new(1, 0, 0, 40)
-configStatusLabel.LayoutOrder = 12
+configStatusLabel.LayoutOrder = 14
 configStatusLabel.BackgroundTransparency = 1
 configStatusLabel.Text = "Config system active."
 configStatusLabel.TextColor3 = Color3.fromRGB(170, 170, 170)
@@ -381,10 +428,24 @@ cooldownToggleBtn.MouseButton1Click:Connect(function()
     saveConfig()
 end)
 
-buyAllPortToggleBtn.MouseButton1Click:Connect(function()
-    buyAllEveryPort = not buyAllEveryPort
-    buyAllPortToggleBtn.Text = buyAllEveryPort and "Buy All Supplies On Port: ON" or "Buy All Supplies On Port: OFF"
-    buyAllPortToggleBtn.BackgroundColor3 = buyAllEveryPort and Color3.fromRGB(50, 180, 80) or Color3.fromRGB(180, 50, 50)
+buyStockPortBtn.MouseButton1Click:Connect(function()
+    autoBuyStockOnPort = not autoBuyStockOnPort
+    buyStockPortBtn.Text = autoBuyStockOnPort and "Buy Stock On Port: ON" or "Buy Stock On Port: OFF"
+    buyStockPortBtn.BackgroundColor3 = autoBuyStockOnPort and Color3.fromRGB(50, 180, 80) or Color3.fromRGB(180, 50, 50)
+    saveConfig()
+end)
+
+buyEnergyPortBtn.MouseButton1Click:Connect(function()
+    autoBuyEnergyOnPort = not autoBuyEnergyOnPort
+    buyEnergyPortBtn.Text = autoBuyEnergyOnPort and "Buy Energy On Port: ON" or "Buy Energy On Port: OFF"
+    buyEnergyPortBtn.BackgroundColor3 = autoBuyEnergyOnPort and Color3.fromRGB(50, 180, 80) or Color3.fromRGB(180, 50, 50)
+    saveConfig()
+end)
+
+buyFuelPortBtn.MouseButton1Click:Connect(function()
+    autoBuyFuelOnPort = not autoBuyFuelOnPort
+    buyFuelPortBtn.Text = autoBuyFuelOnPort and "Buy Fuel On Port: ON" or "Buy Fuel On Port: OFF"
+    buyFuelPortBtn.BackgroundColor3 = autoBuyFuelOnPort and Color3.fromRGB(50, 180, 80) or Color3.fromRGB(180, 50, 50)
     saveConfig()
 end)
 
@@ -516,19 +577,24 @@ if shipEvent and passengerEvent then
                             
                             if isSmartActive then
                                 task.wait(0.08)
-                                local energyAmount = tonumber(energyBox.Text) or 7925.2
-                                shipEvent:FireServer("BuyEnergy", energyAmount)
                                 
-                                -- If Buy All Supplies On Port is active, trigger full restock sequence
-                                if buyAllEveryPort and not isRestocking then
-                                    isRestocking = true
-                                    lastRestockTime = tick()
-                                    runPortSequence(targetId)
-                                    
-                                    task.spawn(function()
-                                        task.wait(15)
-                                        isRestocking = false
-                                    end)
+                                -- Individual Supply Purchasing on Port Arrival
+                                if autoBuyEnergyOnPort then
+                                    local energyAmount = tonumber(energyBox.Text) or 7925.2
+                                    shipEvent:FireServer("BuyEnergy", energyAmount)
+                                    task.wait(0.05)
+                                end
+
+                                if autoBuyStockOnPort then
+                                    local stockAmount = tonumber(stockBox.Text) or 100000
+                                    shipEvent:FireServer("BuyStock", stockAmount)
+                                    task.wait(0.05)
+                                end
+
+                                if autoBuyFuelOnPort and not nuclearActive then
+                                    local fuelAmount = tonumber(fuelBox.Text) or 96000
+                                    shipEvent:FireServer("BuyFuel", fuelAmount)
+                                    task.wait(0.05)
                                 end
                             end
                         end)
