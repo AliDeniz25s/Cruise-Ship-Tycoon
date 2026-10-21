@@ -31,12 +31,25 @@ local isSmartActive = false
 local nuclearActive = true
 local cooldownActive = true
 
--- Separate individual supply toggles for Port arrival
 local autoBuyFuelOnPort = false
 local autoBuyStockOnPort = true
 local autoBuyEnergyOnPort = true
 
 local cachedShipId = "0lAl"
+
+local function parseSupplyInput(text)
+    if type(text) == "number" then return text end
+    local cleanText = string.lower(tostring(text or ""))
+    
+    if string.match(cleanText, "t$") then
+        local numPart = tonumber(string.sub(cleanText, 1, -2))
+        if numPart then
+            return numPart * 1000
+        end
+    end
+    
+    return tonumber(cleanText)
+end
 
 local function saveConfig()
     local success = pcall(function()
@@ -477,14 +490,14 @@ local function runPortSequence(shipId)
             passengerEvent:FireServer(targetId, "LoadPassengersOfShip")
             task.wait(0.08)
             
-            local energyAmount = tonumber(energyBox.Text) or 7925.2
+            local energyAmount = parseSupplyInput(energyBox.Text) or 7925.2
             shipEvent:FireServer("BuyEnergy", energyAmount)
             task.wait(0.05)
             
-            local stockAmount = tonumber(stockBox.Text) or 100000
+            local stockAmount = parseSupplyInput(stockBox.Text) or 100000
             
             if not nuclearActive then
-                local fuelAmount = tonumber(fuelBox.Text) or 96000
+                local fuelAmount = parseSupplyInput(fuelBox.Text) or 96000
                 shipEvent:FireServer("BuyFuel", fuelAmount)
                 task.wait(0.05)
             end
@@ -578,21 +591,21 @@ if shipEvent and passengerEvent then
                             if isSmartActive then
                                 task.wait(0.08)
                                 
-                                -- Individual Supply Purchasing on Port Arrival
+                                
                                 if autoBuyEnergyOnPort then
-                                    local energyAmount = tonumber(energyBox.Text) or 7925.2
+                                    local energyAmount = parseSupplyInput(energyBox.Text) or 7925.2
                                     shipEvent:FireServer("BuyEnergy", energyAmount)
                                     task.wait(0.05)
                                 end
 
                                 if autoBuyStockOnPort then
-                                    local stockAmount = tonumber(stockBox.Text) or 100000
+                                    local stockAmount = parseSupplyInput(stockBox.Text) or 100000
                                     shipEvent:FireServer("BuyStock", stockAmount)
                                     task.wait(0.05)
                                 end
 
                                 if autoBuyFuelOnPort and not nuclearActive then
-                                    local fuelAmount = tonumber(fuelBox.Text) or 96000
+                                    local fuelAmount = parseSupplyInput(fuelBox.Text) or 96000
                                     shipEvent:FireServer("BuyFuel", fuelAmount)
                                     task.wait(0.05)
                                 end
@@ -604,8 +617,7 @@ if shipEvent and passengerEvent then
         end
         
         if not isSmartActive or isRestocking then return end
-        
-        -- Respect the Cooldown Toggle state
+
         if cooldownActive and (tick() - lastRestockTime) < RESTOCK_COOLDOWN then
             return
         end
