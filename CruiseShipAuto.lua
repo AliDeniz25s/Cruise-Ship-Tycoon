@@ -23,11 +23,12 @@ ScreenGui.IgnoreGuiInset = true
 ScreenGui.Parent = playerGui
 
 local CONFIG_FILE_NAME = "cruiseline_config.json"
-local toggleBtn, nuclearToggleBtn
+local toggleBtn, nuclearToggleBtn, cooldownToggleBtn
 local fuelBox, stockBox, energyBox, routeBox
 local configStatusLabel
 local isSmartActive = false
 local nuclearActive = true
+local cooldownActive = true
 local cachedShipId = "0lAl"
 
 local function saveConfig()
@@ -38,7 +39,8 @@ local function saveConfig()
             EnergyAmount = energyBox.Text,
             RouteID = routeBox.Text,
             AutomationActive = isSmartActive,
-            NuclearMode = nuclearActive
+            NuclearMode = nuclearActive,
+            CooldownMode = cooldownActive
         }
         if writefile then
             writefile(CONFIG_FILE_NAME, HttpService:JSONEncode(data))
@@ -62,6 +64,14 @@ local function loadConfig()
                     if nuclearToggleBtn then
                         nuclearToggleBtn.Text = nuclearActive and "Nuclear Mode: ON" or "Nuclear Mode: OFF"
                         nuclearToggleBtn.BackgroundColor3 = nuclearActive and Color3.fromRGB(50, 180, 80) or Color3.fromRGB(180, 50, 50)
+                    end
+                end
+                
+                if decoded.CooldownMode ~= nil then
+                    cooldownActive = decoded.CooldownMode
+                    if cooldownToggleBtn then
+                        cooldownToggleBtn.Text = cooldownActive and "Restock Cooldown: ON" or "Restock Cooldown: OFF"
+                        cooldownToggleBtn.BackgroundColor3 = cooldownActive and Color3.fromRGB(50, 180, 80) or Color3.fromRGB(180, 50, 50)
                     end
                 end
                 
@@ -99,8 +109,8 @@ end)
 
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 220, 0, 440)
-mainFrame.Position = UDim2.new(1, -240, 1, -465)
+mainFrame.Size = UDim2.new(0, 220, 0, 480)
+mainFrame.Position = UDim2.new(1, -240, 1, -505)
 mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 mainFrame.BackgroundTransparency = 0.05
 mainFrame.BorderSizePixel = 0
@@ -166,7 +176,7 @@ local contentContainer = Instance.new("ScrollingFrame")
 contentContainer.Size = UDim2.new(1, -20, 1, -45)
 contentContainer.Position = UDim2.new(0, 10, 0, 38)
 contentContainer.BackgroundTransparency = 1
-contentContainer.CanvasSize = UDim2.new(0, 0, 0, 480)
+contentContainer.CanvasSize = UDim2.new(0, 0, 0, 520)
 contentContainer.ScrollBarThickness = 4
 contentContainer.Parent = mainFrame
 
@@ -196,7 +206,18 @@ nuclearToggleBtn.TextSize = 13
 nuclearToggleBtn.Parent = contentContainer
 Instance.new("UICorner", nuclearToggleBtn).CornerRadius = UDim.new(0, 6)
 
--- Hold-to-View Description Logic
+cooldownToggleBtn = Instance.new("TextButton")
+cooldownToggleBtn.Size = UDim2.new(1, 0, 0, 30)
+cooldownToggleBtn.LayoutOrder = 3
+cooldownToggleBtn.BackgroundColor3 = Color3.fromRGB(50, 180, 80)
+cooldownToggleBtn.Text = "Restock Cooldown: ON"
+cooldownToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+cooldownToggleBtn.Font = Enum.Font.SourceSansBold
+cooldownToggleBtn.TextSize = 13
+cooldownToggleBtn.Parent = contentContainer
+Instance.new("UICorner", cooldownToggleBtn).CornerRadius = UDim.new(0, 6)
+
+-- Hold-to-View Description Logic for Nuclear Button
 local isHoldingNuclear = false
 
 nuclearToggleBtn.InputBegan:Connect(function(input)
@@ -215,7 +236,7 @@ end)
 
 local testBtn = Instance.new("TextButton")
 testBtn.Size = UDim2.new(1, 0, 0, 30)
-testBtn.LayoutOrder = 3
+testBtn.LayoutOrder = 4
 testBtn.BackgroundColor3 = Color3.fromRGB(50, 100, 180)
 testBtn.Text = "Run Sequence"
 testBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -260,14 +281,14 @@ local function createInputBox(labelText, defaultVal, order)
     return box
 end
 
-fuelBox = createInputBox("Fuel Amount:", 0, 4)
-stockBox = createInputBox("Stock Amount:", 551000, 5)
-energyBox = createInputBox("Energy Amt:", 0, 6)
-routeBox = createInputBox("Route ID:", 3, 7)
+fuelBox = createInputBox("Fuel Amount:", 0, 5)
+stockBox = createInputBox("Stock Amount:", 551000, 6)
+energyBox = createInputBox("Energy Amt:", 0, 7)
+routeBox = createInputBox("Route ID:", 3, 8)
 
 local saveConfigBtn = Instance.new("TextButton")
 saveConfigBtn.Size = UDim2.new(1, 0, 0, 32)
-saveConfigBtn.LayoutOrder = 8
+saveConfigBtn.LayoutOrder = 9
 saveConfigBtn.BackgroundColor3 = Color3.fromRGB(50, 150, 80)
 saveConfigBtn.Text = "Save Config"
 saveConfigBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -278,7 +299,7 @@ Instance.new("UICorner", saveConfigBtn).CornerRadius = UDim.new(0, 6)
 
 local loadConfigBtn = Instance.new("TextButton")
 loadConfigBtn.Size = UDim2.new(1, 0, 0, 32)
-loadConfigBtn.LayoutOrder = 9
+loadConfigBtn.LayoutOrder = 10
 loadConfigBtn.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
 loadConfigBtn.Text = "Load Config"
 loadConfigBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -289,7 +310,7 @@ Instance.new("UICorner", loadConfigBtn).CornerRadius = UDim.new(0, 6)
 
 configStatusLabel = Instance.new("TextLabel")
 configStatusLabel.Size = UDim2.new(1, 0, 0, 40)
-configStatusLabel.LayoutOrder = 10
+configStatusLabel.LayoutOrder = 11
 configStatusLabel.BackgroundTransparency = 1
 configStatusLabel.Text = "Config system active."
 configStatusLabel.TextColor3 = Color3.fromRGB(170, 170, 170)
@@ -329,6 +350,13 @@ nuclearToggleBtn.MouseButton1Click:Connect(function()
     nuclearActive = not nuclearActive
     nuclearToggleBtn.Text = nuclearActive and "Nuclear Mode: ON" or "Nuclear Mode: OFF"
     nuclearToggleBtn.BackgroundColor3 = nuclearActive and Color3.fromRGB(50, 180, 80) or Color3.fromRGB(180, 50, 50)
+    saveConfig()
+end)
+
+cooldownToggleBtn.MouseButton1Click:Connect(function()
+    cooldownActive = not cooldownActive
+    cooldownToggleBtn.Text = cooldownActive and "Restock Cooldown: ON" or "Restock Cooldown: OFF"
+    cooldownToggleBtn.BackgroundColor3 = cooldownActive and Color3.fromRGB(50, 180, 80) or Color3.fromRGB(180, 50, 50)
     saveConfig()
 end)
 
@@ -471,7 +499,8 @@ if shipEvent and passengerEvent then
         
         if not isSmartActive or isRestocking then return end
         
-        if (tick() - lastRestockTime) < RESTOCK_COOLDOWN then
+        -- Respect the Cooldown Toggle state
+        if cooldownActive and (tick() - lastRestockTime) < RESTOCK_COOLDOWN then
             return
         end
         
